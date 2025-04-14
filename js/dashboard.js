@@ -1,5 +1,6 @@
 // Constants for Azure Storage connection
 const storageAccount = "foodwastestorageacc";
+// Replace the entire sasToken definition with this exact format
 const sasToken = "?sv=2024-11-04&ss=b&srt=co&sp=rwlactfx&se=2025-05-14T01:55:38Z&st=2025-04-13T17:55:38Z&spr=https&sig=gf%2FVNKz9ktIWIx04vI%2Fdq3CzYIsz8kvNvK%2FdUNaPNao%3D";
 
 // Sample data for development/testing since we don't have real data yet
@@ -63,66 +64,61 @@ const sampleData = [
 
 // Function to fetch analysis results
 async function fetchAnalysisResults() {
+    console.log("Starting to fetch results...");
     try {
-        // Always try to fetch from Azure first, don't check hostname
-        const url = `https://foodwastestorageacc.blob.core.windows.net/results?restype=container&comp=list${sasToken}`;
-        
-        console.log("Fetching results from Azure...");
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            console.warn('Error fetching from Azure, status:', response.status);
-            console.warn('Falling back to sample data');
-            return sampleData;
-        }
-        
-        // Parse XML response
-        const xmlText = await response.text();
-        console.log("Got XML response:", xmlText.substring(0, 200) + "...");
-        
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-        
-        // Get all blob names
-        const blobs = Array.from(xmlDoc.getElementsByTagName('Blob'));
-        console.log("Found blobs:", blobs.length);
-        
-        if (blobs.length === 0) {
-            console.warn('No blobs found, using sample data');
-            return sampleData;
-        }
-        
-        const resultPromises = blobs.map(async blob => {
-            const nameElement = blob.getElementsByTagName('Name')[0];
-            if (!nameElement) return null;
-            
-            const name = nameElement.textContent;
-            console.log("Processing blob:", name);
-            
-            const blobUrl = `https://foodwastestorageacc.blob.core.windows.net/results/${name}${sasToken}`;
-            const blobResponse = await fetch(blobUrl);
-            
-            if (!blobResponse.ok) {
-                console.warn(`Failed to fetch blob ${name}`);
-                return null;
-            }
-            
-            return blobResponse.json();
-        });
-        
-        // Wait for all blob contents to be fetched
-        const results = await Promise.all(resultPromises);
-        const validResults = results.filter(r => r !== null);
-        
-        console.log("Valid results:", validResults.length);
-        return validResults.length > 0 ? validResults : sampleData;
-        
-    } catch (error) {
-        console.error('Error fetching analysis results:', error);
-        // Fall back to sample data
+      // For testing, always return sample data first
+      return sampleData;
+      
+      /* Once Logic App is working, uncomment this section
+      const url = `https://foodwastestorageacc.blob.core.windows.net/results?restype=container&comp=list${sasToken}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        console.error("Error fetching results:", response.status);
         return sampleData;
+      }
+      
+      // Process the response
+      const xmlText = await response.text();
+      console.log("Got response from Azure");
+      
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+      
+      const blobs = Array.from(xmlDoc.getElementsByTagName("Blob"));
+      if (blobs.length === 0) {
+        console.log("No results found in container");
+        return sampleData;
+      }
+      
+      // Get result files
+      const resultPromises = blobs.map(async (blob) => {
+        const nameElement = blob.getElementsByTagName("Name")[0];
+        if (!nameElement) return null;
+        
+        const name = nameElement.textContent;
+        const blobUrl = `https://foodwastestorageacc.blob.core.windows.net/results/${name}${sasToken}`;
+        
+        try {
+          const blobResponse = await fetch(blobUrl);
+          if (!blobResponse.ok) return null;
+          return await blobResponse.json();
+        } catch (error) {
+          console.error(`Error fetching blob ${name}:`, error);
+          return null;
+        }
+      });
+      
+      const results = await Promise.all(resultPromises);
+      const validResults = results.filter(r => r !== null);
+      
+      return validResults.length > 0 ? validResults : sampleData;
+      */
+    } catch (error) {
+      console.error("Error in fetchAnalysisResults:", error);
+      return sampleData;
     }
-}
+  }
 
 // Calculate statistics
 function calculateStatistics(data) {
